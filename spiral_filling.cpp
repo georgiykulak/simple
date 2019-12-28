@@ -6,7 +6,6 @@ int main(int argc, char** argv)
     std::vector<std::vector<long>> mtx;
     std::vector<long>::size_type sz;
     size_t iter = 0;
-    bool flag = true;
 
     std::cout << "Enter length of matrix: ";
     std::cin >> sz;
@@ -19,6 +18,7 @@ int main(int argc, char** argv)
     std::vector<long>::size_type start = 0;
     std::vector<long>::size_type finish = sz - 1;
     const bool parity = sz % 2;
+    bool flag = true;
 
     sz = parity ? sz - 1 : sz;
     while ( sz-- ) {
