@@ -20,14 +20,10 @@ public:
 
     Polynomial ( std::string const & expr )
     {
-DEBUG( "START , expr='" << expr << "'" );
         if ( expr.empty() )
             return;
         
-        std::size_t i = 0;
-
         auto pos = expr.find( "x" );
-DEBUG( "expr.find( \"x\" )='" << pos << "'" );
         if ( pos == std::string::npos )
         {
             coefficient = std::stoi( expr );
@@ -38,7 +34,6 @@ DEBUG( "expr.find( \"x\" )='" << pos << "'" );
             coefficient = 1;
 
         auto number = expr.substr( 0, pos );
-DEBUG( "expr.substr( 0, pos )='" << number << "'" );
 
         if ( number == "-" )
         {
@@ -54,7 +49,6 @@ DEBUG( "expr.substr( 0, pos )='" << number << "'" );
         if ( pos == expr.size() )
         {
             exponent = 1;
-DEBUG( "coefficient='" << coefficient << "' exponent='" << exponent << "'" );
             return;
         }
 
@@ -65,7 +59,6 @@ DEBUG( "coefficient='" << coefficient << "' exponent='" << exponent << "'" );
             coefficient = std::stoi( number );
 
         pos = expr.find( "x^" );
-DEBUG( "expr.find( \"x^\" )='" << pos << "'" );
         if ( pos == std::string::npos )
         {
             exponent = 1;
@@ -73,10 +66,7 @@ DEBUG( "expr.find( \"x^\" )='" << pos << "'" );
         }
         
         number = expr.substr( pos + 2 );
-DEBUG( "expr.substr( pos + 1 )='" << number << "'" );
         exponent = std::stoi( number );
-
-DEBUG( "FINISH , coefficient='" << coefficient << "' exponent='" << exponent << "'" );
     }
 
     bool operator< ( Polynomial const & poly ) const
@@ -97,25 +87,20 @@ DEBUG( "FINISH , coefficient='" << coefficient << "' exponent='" << exponent << 
 
     std::string derivate () const
     {
-DEBUG( "START " << __FUNCTION__ );
         std::string res;
 
-DEBUG( "Before check ( coefficient > 0 )" );
         if ( coefficient > 0 )
             res += '+';
 
-DEBUG( "Before check ( exponent == 1 ) , res='" << res << "'" );
         if ( exponent == 1 )
             return res + std::to_string( coefficient );
         
         auto const newCoef = coefficient * static_cast< signed >( exponent );
         auto const newExpn = exponent - 1;
 
-DEBUG( "Before check ( newCoef == 0 ) , res='" << res << "'" );
         if ( newCoef == 0 )
             return std::string();
 
-DEBUG( "Before check of ( newExpn == 0 ) , res='" << res << "'" );
         if ( newExpn == 0 )
         {
             res += std::to_string( newCoef );
@@ -129,14 +114,11 @@ DEBUG( "Before check of ( newExpn == 0 ) , res='" << res << "'" );
             res += std::to_string( newCoef ) + "*x";
         }
 
-DEBUG( "Before check ( newExpn == 1 ) , res='" << res << "'" );
         if ( newExpn == 1 )
             return res;
 
-DEBUG( "After check ( newExpn == 1 ) , res='" << res << "'" );
         res += '^' + std::to_string( newExpn );
 
-DEBUG( "START " << __FUNCTION__ << " res='" << res << "'" );
         return res;
     }
 
@@ -169,42 +151,36 @@ DEBUG( "START " << __FUNCTION__ << " res='" << res << "'" );
         return res;
     }
 
-    friend std::string sum ( Set && ); 
+    static std::string sum ( Set && ms )
+    {
+        std::string res;
+
+        for ( auto it = ms.begin(); it != ms.end(); it = ms.upper_bound( *it ) )
+        {
+            if ( ms.count( *it ) > 1 )
+            {
+                Polynomial tmp;
+                auto pr = ms.equal_range( *it );
+        
+                for ( auto rIt = pr.first; rIt != pr.second; ++rIt )
+                {
+                    tmp += *rIt;
+                }
+                
+                res += tmp.toString();
+                continue;
+            }
+
+            res += it->toString();
+        }
+
+        return res;
+    }
 
 private:
     unsigned exponent{ 0 };
     signed   coefficient{ 0 };
 };
-
-std::string sum ( Polynomial::Set && ms )
-{
-    std::string res;
-
-int i = 0;
-    for ( auto it = ms.begin(); it != ms.end(); it = ms.upper_bound( *it ) )
-    {
-DEBUG( "In loop start " << i++ );
-        std::cout << "{ coefficient = " << it->coefficient << " | exponent = " << it->exponent << " }\n";
-        if ( ms.count( *it ) > 1 )
-        {
-            Polynomial tmp;
-            auto pr = ms.equal_range( *it );
-    
-            for ( auto rIt = pr.first; rIt != pr.second; ++rIt )
-            {
-                tmp += *rIt;
-            }
-            
-            res += tmp.toString();
-            continue;
-        }
-
-        res += it->toString();
-DEBUG( "In loop finish " << i++ << " , res='" << res << "'" );
-    }
-
-    return res;
-}
 
 Polynomial::Set toPolynomialSet ( std::string const & str )
 {
@@ -215,7 +191,6 @@ Polynomial::Set toPolynomialSet ( std::string const & str )
     {
         if ( str[ i ] == '+' || str[ i ] == '-' )
         {
-DEBUG( "Inside check of opeartor between polynomials" );
             auto const subStr = str.substr( start, i - start );
             pSet.insert( subStr );
             start = i;
@@ -241,9 +216,7 @@ std::string derivative ( std::string const & polyString )
     if ( !res.empty() && res[ 0 ] == '+' )
         res.erase( 0, 1 );
 
-DEBUG( "res='" << res << "'" );
-
-    res = /*Polynomial::*/sum( std::move( toPolynomialSet( res ) ) );
+    res = Polynomial::sum( std::move( toPolynomialSet( res ) ) );
 
     if ( !res.empty() && res[ 0 ] == '+' )
         res.erase( 0, 1 );
@@ -260,11 +233,8 @@ int main()
 
     // Test 1
     test = "x^2+x";
-    /*auto res = derivative( test );
-    std::cout << "derivative( test ) = '" << res << "'\n";*/
-    assert( "2*x+1" == res );
+    assert( "2*x+1" == derivative( test ) );
 
-    ///*
     // Test 2
     test = "2*x^100+100*x^2";
     assert( "200*x^99+200*x" == derivative( test ) );
@@ -281,6 +251,6 @@ int main()
     // Test 5
     test = "x+x+x+x+x+x+x+x+x+x";
     assert( "10" == derivative( test ) );
-    //*/
+    
     return 0;
 }
