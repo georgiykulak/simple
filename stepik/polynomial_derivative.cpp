@@ -2,14 +2,7 @@
 #include <cassert>
 #include <set>
 
-//#define NO_DEBUG
-
-#ifndef NO_DEBUG
-#define DEBUG( out )    \
-    std::cout << "Line=" << __LINE__ << " , " << out << std::endl;
-#else
-#define DEBUG( out ) ;
-#endif // NO_DEBUG //
+// I can use regexp in this task
 
 class Polynomial
 {
@@ -71,9 +64,6 @@ public:
 
     bool operator< ( Polynomial const & poly ) const
     {
-        if ( exponent == poly.exponent )
-            return coefficient > poly.coefficient;
-
         return exponent > poly.exponent;
     }
 
@@ -151,36 +141,42 @@ public:
         return res;
     }
 
-    static std::string sum ( Set && ms )
-    {
-        std::string res;
-
-        for ( auto it = ms.begin(); it != ms.end(); it = ms.upper_bound( *it ) )
-        {
-            if ( ms.count( *it ) > 1 )
-            {
-                Polynomial tmp;
-                auto pr = ms.equal_range( *it );
-        
-                for ( auto rIt = pr.first; rIt != pr.second; ++rIt )
-                {
-                    tmp += *rIt;
-                }
-                
-                res += tmp.toString();
-                continue;
-            }
-
-            res += it->toString();
-        }
-
-        return res;
-    }
+    friend std::string sum ( Set && ); 
 
 private:
     unsigned exponent{ 0 };
     signed   coefficient{ 0 };
 };
+
+std::string sum ( Polynomial::Set && ms )
+{
+    std::string res;
+
+    for ( auto it = ms.begin(); it != ms.end(); it = ms.upper_bound( *it ) )
+    {
+        if ( ms.count( *it ) > 1 )
+        {
+            Polynomial tmp;
+            auto pr = ms.equal_range( *it );
+            tmp.exponent = pr.first->exponent;
+    
+            for ( auto rIt = pr.first; rIt != pr.second; ++rIt )
+            {
+                tmp += *rIt;
+            }
+            
+            res += tmp.toString();
+            continue;
+        }
+        
+        res += it->toString();
+    }
+
+    if ( res.empty() )
+        res = "0";
+
+    return res;
+}
 
 Polynomial::Set toPolynomialSet ( std::string const & str )
 {
@@ -216,7 +212,7 @@ std::string derivative ( std::string const & polyString )
     if ( !res.empty() && res[ 0 ] == '+' )
         res.erase( 0, 1 );
 
-    res = Polynomial::sum( std::move( toPolynomialSet( res ) ) );
+    res = sum( std::move( toPolynomialSet( res ) ) );
 
     if ( !res.empty() && res[ 0 ] == '+' )
         res.erase( 0, 1 );
@@ -251,6 +247,18 @@ int main()
     // Test 5
     test = "x+x+x+x+x+x+x+x+x+x";
     assert( "10" == derivative( test ) );
-    
+
+    // Test 6
+    test = "8*x^2-3*x^4+9*x^2";
+    assert( "-12*x^3+34*x" ==  derivative( test ) );
+
+    // Test 7
+    test = "0*x^0";
+    assert( "0" ==  derivative( test ) );
+
+    // Test 8
+    test = "234";
+    assert( "0" ==  derivative( test ) );
+
     return 0;
 }
