@@ -17,7 +17,7 @@ public:
         if ( !ptr )
             return reinterpret_cast< void * >( alloc( size ) );
 
-        auto it = m_heap.find( reinterpret_cast< char * >( ptr ) );
+        auto it = m_heap.find( reinterpret_cast< byte_type >( ptr ) );
         if ( it == m_heap.end() )
             return reinterpret_cast< void * >( alloc( size ) );
 
@@ -46,7 +46,7 @@ public:
         if ( !ptr )
             return;
 
-        auto it = m_heap.find( reinterpret_cast< char * >( ptr ) );
+        auto it = m_heap.find( reinterpret_cast< byte_type >( ptr ) );
         if ( it != m_heap.end() )
             m_heap.erase( it );
     }
@@ -56,14 +56,14 @@ private:
     // sizeof( m_mem ) == 2^20, from address m_mem + 0 to m_mem + 1048576
     /* static */ char m_mem[ m_max_size ]; 
     // map of "address" and offset
-    /* static */ std::map< char *, size_type > m_heap;
+    /* static */ std::map< byte_type, size_type > m_heap;
 
-    char * alloc ( size_type size )
+    byte_type alloc ( size_type size )
     {
         if ( !size )
             return nullptr;
 
-        char * back;
+        byte_type back;
         auto prev = m_heap.crbegin(); // maximum
 
         if ( prev != m_heap.crend() )
@@ -84,7 +84,7 @@ private:
         return back;
     }
 
-    char * defragment ()
+    byte_type defragment ()
     {
         // TODO
         return nullptr;
