@@ -1,4 +1,8 @@
+# Objects
 *.out
 *.o
+build
+
+# Texts
 LICENSE
 README.md
