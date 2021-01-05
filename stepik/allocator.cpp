@@ -1,5 +1,6 @@
 #include <iostream>
 #include <map>
+#include <cstring>
 
 class SmallAllocator
 {
@@ -31,10 +32,7 @@ public:
         if ( !newPtr )
             return nullptr;
 
-        for ( size_type i = 0; i < it->second; ++i )
-        {
-            *( newPtr + i ) = *( it->first + i );
-        }
+        memcpy( newPtr, ptr, size );
 
         m_heap.erase( it );
 
@@ -54,9 +52,9 @@ public:
 private:
     static constexpr size_type m_max_size = 1048576;
     // sizeof( m_mem ) == 2^20, from address m_mem + 0 to m_mem + 1048576
-    /* static */ char m_mem[ m_max_size ]; 
+    char m_mem[ m_max_size ]; 
     // map of "address" and offset
-    /* static */ std::map< byte_type, size_type > m_heap;
+    std::map< byte_type, size_type > m_heap;
 
     byte_type alloc ( size_type size )
     {
@@ -64,18 +62,18 @@ private:
             return nullptr;
 
         byte_type back;
-        auto prev = m_heap.crbegin(); // maximum
+        auto prev = m_heap.crbegin();
 
         if ( prev != m_heap.crend() )
         {
             if ( prev->first + prev->second + size > m_mem + m_max_size )
-                back = defragment(); // last entry
+                back = defragment();
             else
                 back = prev->first + prev->second;
         }
         else
         {
-            back = m_mem; // first entry
+            back = m_mem;
         }
         
         if ( back )
