@@ -6,3 +6,7 @@ build
 # Texts
 LICENSE
 README.md
+
+# IDE
+.vscode
+.idea
