@@ -6,6 +6,7 @@ build
 # Texts
 LICENSE
 README.md
+*.log
 
 # IDE
 .vscode
