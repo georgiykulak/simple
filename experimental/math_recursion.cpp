@@ -6,7 +6,7 @@
 // num = 1; factorial(num) = 1
 // num = 2; factorial(num) = 1*2
 // num = 5; factorial(num) = 1*2*3*4*5
-unsigned long factorial ( unsigned long num )
+constexpr unsigned long factorial ( unsigned long num )
 {
     if ( num <= 1 )
         return 1;
@@ -20,7 +20,7 @@ unsigned long factorial ( unsigned long num )
 // num = 3; fibonacci(num) = (0 + 1) + 1
 // num = 4; fibonacci(num) = 0 + (1 + 1) + 2
 // num = 5; fibonacci(num) = 0 + 1 + ( 1 + 2 ) + 3
-unsigned long fibonacci ( unsigned long num )
+constexpr unsigned long fibonacci ( unsigned long num )
 {
     if ( num <= 1 )
         return num;
