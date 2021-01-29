@@ -3,19 +3,19 @@
 #include <list>
 #include <vector>
 #include <cassert>
+#include <type_traits>
+
+// DON'T FORGET TO LINK "-lpthread" !!!
 
 template< typename BIterator, typename UnaryF, typename BinaryF >
 auto map_reduce( BIterator p, BIterator q, UnaryF f1, BinaryF f2, size_t threads )
-    -> decltype( f1( *p ) )
+    -> typename std::result_of< UnaryF( decltype( *std::declval< BIterator >() ) ) >::type
 {
     auto const length = std::distance( p, q );
     std::size_t const cnt_per_thrd = length / threads;
 
-    /*auto res = f1( *p );
-    while( ++p != q )
-        res = f2( res, f1( *p ) );*/
-
     auto res = f1( *p );
+    ++p;
     for ( std::size_t t = 0; t < threads; ++t )
     {
         std::size_t counter = 0;
@@ -23,18 +23,18 @@ auto map_reduce( BIterator p, BIterator q, UnaryF f1, BinaryF f2, size_t threads
         for ( ; counter < cnt_per_thrd && it != q; ++it, ++counter ) ;
 
         auto lambda =
-            [ &f1, &f2, res ]( BIterator p, BIterator q )
-                -> decltype( f1( *p ) )
+            [ &f1, &f2 ]( BIterator p, BIterator q )
+                -> typename std::result_of< UnaryF( decltype( *std::declval< BIterator >() ) ) >::type
             {
-                auto tmpRes = res;
-                while( ++p != q )
-                    tmpRes = f2( tmpRes, f1( *p ) );
-                return tmpRes;
+                auto res = f1( *p );
+                while ( ++p != q )
+                    res = f2( res, f1( *p ) );
+                return res;
             };
 
-        auto h = std::async( std::launch::async, lambda, p, it );
+        auto handle = std::async( std::launch::async, lambda, p, it );
 
-        res = h.get();
+        res = f2( res, handle.get() );
         p = it;
     }
 
@@ -75,14 +75,14 @@ int main()
     assert( has_even == true );
 
     std::vector< std::string > const v = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11" };
-    for ( std::size_t i = 1; i <= v.size(); ++i )
+    for ( std::size_t j = 1; j <= v.size(); ++j )
     {
         auto ssum = map_reduce(
                 v.begin()
             ,   v.end()
-            ,   []( std::string i ){ return i; }
+            ,   []( std::string s ){ return s; }
             ,   std::plus< std::string >()
-            ,   i
+            ,   j
         );
 
         std::cout << ssum << std::endl;
