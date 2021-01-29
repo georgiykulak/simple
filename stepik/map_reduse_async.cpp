@@ -1,24 +1,44 @@
 #include <iostream>
+#include <cassert>
 #include <future>
 #include <list>
+
 #include <vector>
-#include <cassert>
 #include <type_traits>
 
 // DON'T FORGET TO LINK "-lpthread" !!!
 
-template< typename I, typename UF >
+template< typename I, typename UF, typename BF >
 using MapReduceRetT =
-    typename std::result_of< UF( decltype( *std::declval< I >() ) ) >::type;
+    decltype(
+        std::declval< BF >()(
+                std::declval< UF >()( *std::declval< I >() )
+            ,   std::declval< UF >()( *std::declval< I >() )
+        )
+    );
 
 template< typename BIterator, typename UnaryF, typename BinaryF >
-auto map_reduce( BIterator p, BIterator q, UnaryF f1, BinaryF f2, size_t threads )
-    -> MapReduceRetT< BIterator, UnaryF >
+MapReduceRetT< BIterator, UnaryF, BinaryF > map_reduce (
+        BIterator p
+    ,   BIterator q
+    ,   UnaryF f1
+    ,   BinaryF f2
+    ,   size_t threads
+)
 {
+    using RetT = MapReduceRetT< BIterator, UnaryF, BinaryF >;
+
+    assert( threads );
+    
     auto length = std::distance( p, q );
+
+    assert( length );
+
     std::size_t const cnt_per_thrd = length / threads;
 
-    MapReduceRetT< BIterator, UnaryF > res{};
+    std::vector< std::future< RetT > > resVector;
+    resVector.reserve( threads );
+    
     for ( std::size_t t = 0; t < threads; ++t )
     {
         std::size_t counter = 0;
@@ -31,7 +51,7 @@ auto map_reduce( BIterator p, BIterator q, UnaryF f1, BinaryF f2, size_t threads
 
         auto lambda =
             [ &f1, &f2 ]( BIterator p, BIterator q )
-                -> MapReduceRetT< BIterator, UnaryF >
+                -> RetT
             {
                 auto res = f1( *p );
                 while ( ++p != q )
@@ -39,11 +59,17 @@ auto map_reduce( BIterator p, BIterator q, UnaryF f1, BinaryF f2, size_t threads
                 return res;
             };
 
-        auto handle = std::async( std::launch::async, lambda, p, it );
+        resVector.emplace_back(
+            std::async( std::launch::async, lambda, p, it )
+        );
 
-        res = f2( res, handle.get() );
         p = it;
     }
+
+    RetT res{};
+
+    for ( auto & fut : resVector )
+        res = f2( res, fut.get() );
 
     return res;
 }
@@ -61,7 +87,6 @@ int main()
         ,   3
     );
 
-    std::cout << sum << std::endl;
     assert( sum == 55 );
 
     // проверка наличия чётных чисел в четыре потока
@@ -73,7 +98,6 @@ int main()
         ,   4
     );
 
-    std::cout << has_even << std::endl;
     assert( has_even == true );
 
     std::vector< std::string > const v1 =
@@ -88,7 +112,6 @@ int main()
             ,   j
         );
 
-        std::cout << ssum << std::endl;
         assert( ssum == "1234567891011" );
     }
 
@@ -105,14 +128,14 @@ int main()
             ,   i
         );
 
-        std::cout << ssum << std::endl;
         assert( ssum == 190 );
     }
 
     std::vector< std::string > const v2 =
-        { "multithread", "and", "async", "in", "C++", "is", "total", "shit" };
+        { "multithread", "and", "async", "in", "C++", "is", "total", "sh!t" };
 
-    for ( std::size_t i = 1; i <= v1.size(); ++i )
+    // If "i <= v2.size()": on Stepik OK, there NOT OK
+    for ( std::size_t i = 1; i <= 8; ++i )
     {    
         auto size_sum = map_reduce(
                 v2.begin()
@@ -122,7 +145,6 @@ int main()
             ,   i
         );
 
-        std::cout << size_sum << std::endl;
         assert( size_sum == 35 );
     }
 
