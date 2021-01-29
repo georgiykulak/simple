@@ -6,7 +6,7 @@
 
 template< typename BIterator, typename UnaryF, typename BinaryF >
 auto map_reduce( BIterator p, BIterator q, UnaryF f1, BinaryF f2, size_t threads )
-    -> decltype( std::declval< BinaryF& >()( *std::declval< BIterator >(), *std::declval< BIterator >() ) )
+    -> decltype( f1( *p ) )
 {
     auto const length = std::distance( p, q );
     std::size_t const cnt_per_thrd = length / threads;
@@ -16,14 +16,26 @@ auto map_reduce( BIterator p, BIterator q, UnaryF f1, BinaryF f2, size_t threads
         res = f2( res, f1( *p ) );*/
 
     auto res = f1( *p );
-    ++p;
     for ( std::size_t t = 0; t < threads; ++t )
     {
         std::size_t counter = 0;
-        for ( ; counter < cnt_per_thrd && p != q; ++p, ++counter )
-        {
-            res = f2( res, f1( *p ) );
-        }
+        auto it = p;
+        for ( ; counter < cnt_per_thrd && it != q; ++it, ++counter ) ;
+
+        auto lambda =
+            [ &f1, &f2, res ]( BIterator p, BIterator q )
+                -> decltype( f1( *p ) )
+            {
+                auto tmpRes = res;
+                while( ++p != q )
+                    tmpRes = f2( tmpRes, f1( *p ) );
+                return tmpRes;
+            };
+
+        auto h = std::async( std::launch::async, lambda, p, it );
+
+        res = h.get();
+        p = it;
     }
 
     for ( ; p != q; ++p )
