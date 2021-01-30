@@ -39,15 +39,16 @@ MapReduceRetT< BIterator, UnaryF, BinaryF > map_reduce (
 
     std::size_t const cnt_per_thrd = length / threads;
 
-    RetT res{};
+    std::vector< RetT > partedResults( threads );
 
     auto lambda =
-        [ &f1, &f2 ]( BIterator p, BIterator q, RetT & currRes )
+        [ &f1, &f2, &partedResults ]
+        ( BIterator p, BIterator q, std::size_t i )
         {
             std::lock_guard< std::mutex > l_guard( g_mutex );
-            currRes = f2( currRes, f1( *p ) );
+            partedResults[ i ] = f1( *p );
             while ( ++p != q )
-                currRes = f2( currRes, f1( *p ) );
+                partedResults[ i ] = f2( partedResults[ i ], f1( *p ) );
         };
 
     std::vector< std::thread > resVector;
@@ -64,7 +65,7 @@ MapReduceRetT< BIterator, UnaryF, BinaryF > map_reduce (
             for ( ; it != q; ++it ) ;
 
         resVector.emplace_back(
-            std::thread( lambda, p, it, std::ref( res ) )
+            std::thread( lambda, p, it, t )
         );
 
         p = it;
@@ -72,6 +73,11 @@ MapReduceRetT< BIterator, UnaryF, BinaryF > map_reduce (
 
     for ( auto & fut : resVector )
         fut.join();
+
+    RetT res{};
+
+    for ( auto const & pr : partedResults )
+        res = f2( res, pr );
 
     return res;
 }
@@ -114,8 +120,7 @@ int main()
             ,   j
         );
 
-        std::cout << ssum << std::endl;
-        //assert( ssum == "1234567891011" );
+        assert( ssum == "1234567891011" );
     }
 
     std::list< int > const l2 =
